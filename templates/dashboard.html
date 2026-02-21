@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Bot Controller</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 32px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            color: #333;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .guest-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .guest-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .guest-form input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .guest-form button {
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .guest-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .guest-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #28a745;
+        }
+
+        .guest-item .id {
+            font-weight: bold;
+        }
+
+        .guest-item .status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: #e8f5e9;
+            color: #28a745;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-item label {
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .control-item input, .control-item select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .bot-screen {
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .screen-header {
+            background: #333;
+            color: white;
+            padding: 10px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .screen-content {
+            height: 400px;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .screen-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #00ff00;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .team-code-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .team-code-box .code {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 10px;
+            font-family: monospace;
+        }
+
+        .live-stats {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stats-chart, .stats-details {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .match-history {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .screens-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .guest-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Header -->
+            <div class="header">
+                <h1>🎮 Free Fire Bot Controller</h1>
+                <div class="user-info">
+                    <span id="userEmail">{{ user }}</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Matches</h3>
+                    <div class="value" id="totalMatches">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Bots</h3>
+                    <div class="value" id="activeBots">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Win Rate</h3>
+                    <div class="value" id="winRate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Guild Members</h3>
+                    <div class="value" id="guildMembers">0</div>
+                </div>
+            </div>
+
+            <!-- Guest Account Section -->
+            <div class="guest-section">
+                <h2 class="section-title">👥 Guest Accounts (Max 4)</h2>
+                <div class="guest-form">
+                    <input type="text" placeholder="Guest ID" id="guestId">
+                    <input type="password" placeholder="Password" id="guestPassword">
+                    <button onclick="addGuestAccount()">Add Account</button>
+                </div>
+                <div class="guest-list" id="guestList"></div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <div class="control-row">
+                    <div class="control-item">
+                        <label>Guild Code</label>
+                        <input type="text" placeholder="Enter Guild Code" id="guildCode">
+                    </div>
+                    <div class="control-item">
+                        <label>Number of Matches</label>
+                        <input type="number" value="0" min="0" id="matchCount" placeholder="0 = Infinite">
+                    </div>
+                    <div class="control-item">
+                        <label>Select Accounts</label>
+                        <select multiple id="accountSelect" size="4"></select>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="startBots()">▶ Start Bots</button>
+                    <button class="btn btn-danger" onclick="stopBots()">⏹ Stop All</button>
+                    <button class="btn btn-success" onclick="createGroup()">👥 Create Group</button>
+                </div>
+            </div>
+
+            <!-- Team Code Display -->
+            <div class="team-code-box" id="teamCodeBox" style="display: none;">
+                <h3>Team Code Generated</h3>
+                <div class="code" id="teamCode">XXXXXX</div>
+                <p style="margin-top: 10px;">Auto-sending to other bots...</p>
+            </div>
+
+            <!-- Bot Screens -->
+            <h2 class="section-title">🎥 Live Bot Screens</h2>
+            <div class="screens-grid" id="screensGrid"></div>
+
+            <!-- Live Stats -->
+            <div class="live-stats">
+                <div class="stats-chart">
+                    <h3>Match Performance</h3>
+                    <canvas id="matchChart" style="width:100%; height:200px;"></canvas>
+                </div>
+                <div class="stats-details">
+                    <h3>Live Status</h3>
+                    <div id="liveStatus">
+                        <div class="stat-row">
+                            <span>Matches Completed:</span>
+                            <span id="completedMatches">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Current Match:</span>
+                            <span id="currentMatch">Waiting...</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Team Code:</span>
+                            <span id="currentTeamCode">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match History -->
+            <div class="match-history">
+                <h3>Match History</h3>
+                <div class="history-list" id="matchHistory"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let guestAccounts = [];
+        let activeBots = {};
+        let matchChart;
+
+        // Socket event handlers
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            loadGuestAccounts();
+        });
+
+        socket.on('bot_status', function(data) {
+            updateBotStatus(data.account, data.status, data.match);
+        });
+
+        socket.on('team_code', function(data) {
+            document.getElementById('teamCodeBox').style.display = 'block';
+            document.getElementById('teamCode').textContent = data.code;
+            document.getElementById('currentTeamCode').textContent = data.code;
+        });
+
+        socket.on('match_complete', function(data) {
+            addMatchToHistory(data.account, data.matches);
+            updateStats();
+        });
+
+        socket.on('guest_added', function(data) {
+            loadGuestAccounts();
+        });
+
+        socket.on('bots_stopped', function() {
+            document.getElementById('screensGrid').innerHTML = '';
+            document.getElementById('activeBots').textContent = '0';
+        });
+
+        // Guest account functions
+        function addGuestAccount() {
+            const guestId = document.getElementById('guestId').value;
+            const password = document.getElementById('guestPassword').value;
+
+            if (!guestId || !password) {
+                alert('Please enter both ID and password');
+                return;
+            }
+
+            fetch('/add_guest', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({guest_id: guestId, password: password})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('guestId').value = '';
+                    document.getElementById('guestPassword').value = '';
+                    loadGuestAccounts();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function loadGuestAccounts() {
+            fetch('/get_guests')
+                .then(res => res.json())
+                .then(data => {
+                    guestAccounts = data;
+                    updateGuestList();
+                    updateAccountSelect();
+                });
+        }
+
+        function updateGuestList() {
+            const list = document.getElementById('guestList');
+            list.innerHTML = '';
+
+            Object.keys(guestAccounts).forEach((id, index) => {
+                const item = document.createElement('div');
+                item.className = 'guest-item';
+                item.innerHTML = `
+                    <span class="id">${id}</span>
+                    <span class="status">${guestAccounts[id].status}</span>
+                    <button onclick="removeGuest('${id}')" style="background:red; color:white; border:none; border-radius:3px; padding:2px 8px;">✕</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function removeGuest(guestId) {
+            fetch('/remove_guest', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({guest_id: guestId})
+            })
+            .then(() => loadGuestAccounts());
+        }
+
+        function updateAccountSelect() {
+            const select = document.getElementById('accountSelect');
+            select.innerHTML = '';
+
+            Object.keys(guestAccounts).forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = id;
+                select.appendChild(option);
+            });
+        }
+
+        // Bot control functions
+        function startBots() {
+            const selectedAccounts = Array.from(document.getElementById('accountSelect').selectedOptions)
+                .map(opt => opt.value);
+
+            if (selectedAccounts.length === 0) {
+                alert('Please select at least one account');
+                return;
+            }
+
+            const guildCode = document.getElementById('guildCode').value;
+            const matchCount = document.getElementById('matchCount').value;
+
+            createBotScreens(selectedAccounts);
+
+            fetch('/start_bots', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    accounts: selectedAccounts,
+                    match_count: parseInt(matchCount),
+                    guild_code: guildCode
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('activeBots').textContent = selectedAccounts.length;
+                }
+            });
+        }
+
+        function stopBots() {
+            fetch('/stop_bots', {method: 'POST'})
+                .then(() => {
+                    document.getElementById('screensGrid').innerHTML = '';
+                    document.getElementById('activeBots').textContent = '0';
+                });
+        }
+
+        function createBotScreens(accounts) {
+            const grid = document.getElementById('screensGrid');
+            grid.innerHTML = '';
+
+            accounts.forEach((acc, index) => {
+                const screen = document.createElement('div');
+                screen.className = 'bot-screen';
+                screen.id = `screen-${acc}`;
+                screen.innerHTML = `
+                    <div class="screen-header">
+                        <span>Bot ${index + 1}: ${acc}</span>
+                        <span class="status-badge">Starting...</span>
+                    </div>
+                    <div class="screen-content">
+                        <div class="screen-overlay" id="overlay-${acc}">
+                            Status: Initializing<br>
+                            Match: 0
+                        </div>
+                        <iframe id="iframe-${acc}" src="/bot_screen/${acc}"></iframe>
+                    </div>
+                `;
+                grid.appendChild(screen);
+
+                // Refresh iframe every 5 seconds
+                setInterval(() => {
+                    const iframe = document.getElementById(`iframe-${acc}`);
+                    if (iframe) {
+                        iframe.src = `/bot_screen/${acc}?t=${Date.now()}`;
+                    }
+                }, 5000);
+            });
+        }
+
+        function updateBotStatus(account, status, match) {
+            const overlay = document.getElementById(`overlay-${account}`);
+            if (overlay) {
+                overlay.innerHTML = `Status: ${status}<br>Match: ${match || 0}`;
+            }
+
+            const header = document.querySelector(`#screen-${account} .status-badge`);
+            if (header) {
+                header.textContent = status;
+            }
+        }
+
+        function createGroup() {
+            const selectedAccounts = Array.from(document.getElementById('accountSelect').selectedOptions)
+                .map(opt => opt.value);
+
+            if (selectedAccounts.length < 2) {
+                alert('Need at least 2 accounts to create group');
+                return;
+            }
+
+            // Simulate group creation
+            const teamCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('teamCodeBox').style.display = 'block';
+            document.getElementById('teamCode').textContent = teamCode;
+        }
+
+        function addMatchToHistory(account, matchNum) {
+            const history = document.getElementById('matchHistory');
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <span>${account}</span>
+                <span>${new Date().toLocaleTimeString()}</span>
+                <span>Match ${matchNum}</span>
+            `;
+            history.insertBefore(item, history.firstChild);
+
+            if (history.children.length > 10) {
+                history.removeChild(history.lastChild);
+            }
+        }
+
+        function logout() {
+            window.location.href = '/logout';
+        }
+
+        function updateStats() {
+            setInterval(() => {
+                fetch('/bot_status')
+                    .then(res => res.json())
+                    .then(data => {
+                        const activeCount = Object.keys(data).length;
+                        document.getElementById('activeBots').textContent = activeCount;
+
+                        let totalMatches = 0;
+                        Object.values(data).forEach(bot => {
+                            totalMatches += bot.match || 0;
+                        });
+                        document.getElementById('totalMatches').textContent = totalMatches;
+                        document.getElementById('completedMatches').textContent = totalMatches;
+                    });
+
+                fetch('/match_history')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            document.getElementById('currentMatch').textContent = 
+                                `Match #${data[data.length-1].match}`;
+                        }
+                    });
+            }, 3000);
+        }
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('matchChart').getContext('2d');
+            matchChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Matches',
+                        data: [],
+                        borderColor: '#667eea',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Update chart periodically
+            setInterval(() => {
+                fetch('/bot_status')
+                    .then(res => res.json())
+                    .then(data => {
+                        const total = Object.values(data).reduce((sum, bot) => sum + (bot.match || 0), 0);
+                        
+                        if (matchChart.data.labels.length > 10) {
+                            matchChart.data.labels.shift();
+                            matchChart.data.datasets[0].data.shift();
+                        }
+                        
+                        matchChart.data.labels.push(new Date().toLocaleTimeString());
+                        matchChart.data.datasets[0].data.push(total);
+                        matchChart.update();
+                    });
+            }, 5000);
+        }
+
+        // Load initial data
+        loadGuestAccounts();
+        initChart();
+        updateStats();
+    </script>
+</body>
+</html>
